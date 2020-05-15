@@ -1,7 +1,9 @@
 ﻿#if __CONSTRAINED__ || UNITY_STANDALONE_LINUX || UNITY
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 
 namespace Lidgren.Network
@@ -30,11 +32,18 @@ namespace Lidgren.Network
 #if UNITY_ANDROID || UNITY_STANDALONE_OSX || UNITY_STANDALONE_WIN || UNITY_STANDALONE_LINUX || UNITY_IOS || UNITY
 			try
 			{
-				if (!(UnityEngine.Application.internetReachability == UnityEngine.NetworkReachability.NotReachable))
+				if (UnityEngine.Application.internetReachability != UnityEngine.NetworkReachability.NotReachable)
 				{
 					return null;
 				}
-				return IPAddress.Parse(UnityEngine.Network.player.externalIP);
+				var candidate = Dns.GetHostEntry(Dns.GetHostName())
+					.AddressList
+					.FirstOrDefault( ip => ip.AddressFamily == AddressFamily.InterNetwork);
+				if( candidate != null )
+				{
+					return candidate;
+				}
+				throw new Exception("No network adapters with an IPv4 address in the system!");
 			}
 			catch // Catch Access Denied errors
 			{
